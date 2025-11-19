@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventario Spring Boot</title>
+    <style>
+        /* Un poco de CSS para que se vea bonito */
+        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background-color: #f4f4f9; }
+        h1 { text-align: center; color: #333; }
+
+        .formulario { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; gap: 10px; flex-wrap: wrap;}
+        input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; flex: 1; }
+        button { padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #218838; }
+
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #007bff; color: white; }
+        .btn-eliminar { background-color: #dc3545; padding: 5px 10px; font-size: 0.9em; }
+        .btn-eliminar:hover { background-color: #c82333; }
+    </style>
+</head>
+<body>
+
+<h1>📦 Sistema de Inventario</h1>
+
+<div class="formulario">
+    <input type="text" id="nombre" placeholder="Nombre del producto" required>
+    <input type="number" id="precio" placeholder="Precio" step="0.01" required>
+    <input type="number" id="stock" placeholder="Cantidad" required>
+    <button onclick="guardarProducto()">Guardar Producto</button>
+</div>
+
+<table id="tablaProductos">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Producto</th>
+        <th>Precio</th>
+        <th>Stock</th>
+        <th>Acciones</th>
+    </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+
+<script>
+    const API_URL = "/api/productos";
+
+    // 1. Función para Cargar los productos al iniciar
+    async function cargarProductos() {
+        const respuesta = await fetch(API_URL);
+        const productos = await respuesta.json();
+
+        const tabla = document.getElementById("tablaProductos").querySelector("tbody");
+        tabla.innerHTML = ""; // Limpiar tabla antes de recargar
+
+        productos.forEach(producto => {
+            tabla.innerHTML += `
+                <tr>
+                    <td>${producto.id}</td>
+                    <td>${producto.nombre}</td>
+                    <td>$${producto.precio}</td>
+                    <td>${producto.stock}</td>
+                    <td>
+                        <button class="btn-eliminar" onclick="eliminarProducto(${producto.id})">Eliminar</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    // 2. Función para Guardar un producto
+    // 2. Función para Guardar un producto (MEJORADA)
+        async function guardarProducto() {
+            const nombre = document.getElementById("nombre").value;
+            const precio = document.getElementById("precio").value;
+            const stock = document.getElementById("stock").value;
+
+            const producto = { nombre, precio, stock };
+
+            const respuesta = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(producto)
+            });
+
+            if (respuesta.ok) {
+                // Si todo salió bien (Código 200)
+                alert("¡Producto guardado con éxito!");
+                document.getElementById("nombre").value = "";
+                document.getElementById("precio").value = "";
+                document.getElementById("stock").value = "";
+                cargarProductos();
+            } else {
+                // Si hubo error (Código 400)
+                // Leemos el JSON limpio que nos mandó Java
+                const errores = await respuesta.json();
+
+                // Convertimos el objeto de errores en un texto legible
+                let mensajeError = "⚠️ No se pudo guardar:\n";
+                for (const [campo, mensaje] of Object.entries(errores)) {
+                    mensajeError += `- ${campo}: ${mensaje}\n`;
+                }
+
+                alert(mensajeError);
+            }
+        }
+
+    // 3. Función para Eliminar
+    async function eliminarProducto(id) {
+        if(confirm("¿Seguro que quieres eliminar este producto?")) {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            cargarProductos();
+        }
+    }
+
+    // Cargar productos cuando se abra la página
+    cargarProductos();
+</script>
+</body>
+</html>
